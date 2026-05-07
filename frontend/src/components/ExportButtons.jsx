@@ -9,6 +9,11 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
   };
 
   const getCategoryLabel = () => {
+    const today = new Date();
+    const dateStr = String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(today.getDate()).padStart(2, '0') + '-' +
+                   today.getFullYear();
+
     // If product line filter is selected, use that label
     if (selectedProductLineFilter) {
       const productLineMap = {
@@ -17,11 +22,12 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
         'RICE': 'RICE CLIENTS',
         'CONDENSE': 'CONDENSE CLIENTS',
       };
-      return productLineMap[selectedProductLineFilter] || 'Sales Data';
+      const label = productLineMap[selectedProductLineFilter] || 'Sales Data';
+      return `${label} ${dateStr}`;
     }
 
     // Otherwise use category label
-    if (!selectedCategory) return 'Sales Data';
+    if (!selectedCategory) return `Sales Data ${dateStr}`;
 
     const categoryMap = {
       'PVD SALT': 'PVD SALT ONLY',
@@ -41,7 +47,8 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
       'CONDENSE|INDUSTRIAL SALT|PVD SALT|RICE': 'PVD SALT AND INDUSTRIAL SALT AND RICE AND CONDENSE ONLY',
     };
 
-    return categoryMap[selectedCategory] || 'Sales Data';
+    const label = categoryMap[selectedCategory] || 'Sales Data';
+    return `${label} ${dateStr}`;
   };
 
   const showSourceColumn = !filters.source;
@@ -53,8 +60,18 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
       return;
     }
 
-    const exportData = data.map((row, idx) => {
-      const lineNum = currentPage * pageSize + idx + 1;
+    // Deduplicate by CLIENT_NAME|SOURCE
+    const clientMap = new Map();
+    data.forEach(row => {
+      const key = `${row.CLIENT_NAME}|${row.SOURCE}`;
+      if (!clientMap.has(key)) {
+        clientMap.set(key, row);
+      }
+    });
+    const dedupedData = Array.from(clientMap.values());
+
+    const exportData = dedupedData.map((row, idx) => {
+      const lineNum = idx + 1;
       const obj = {
         'Line No.': lineNum,
         'Client Name': row.CLIENT_NAME,
@@ -79,7 +96,7 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
     // Add total row
     exportData.push({
       'Line No.': '',
-      'Client Name': `TOTAL CLIENTS: ${data.length}`,
+      'Client Name': `TOTAL CLIENTS: ${dedupedData.length}`,
       ...(showSourceColumn && { 'Source': '' }),
       ...(showActiveColumn && { 'Status': '' }),
       'PVD SALT': '',
@@ -112,6 +129,16 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
       return;
     }
 
+    // Deduplicate by CLIENT_NAME|SOURCE
+    const clientMap = new Map();
+    data.forEach(row => {
+      const key = `${row.CLIENT_NAME}|${row.SOURCE}`;
+      if (!clientMap.has(key)) {
+        clientMap.set(key, row);
+      }
+    });
+    const dedupedData = Array.from(clientMap.values());
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -120,15 +147,15 @@ function ExportButtons({ data, filters, currentPage = 0, pageSize = 5, selectedC
 
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 25);
-    doc.text(`Total Clients: ${data.length}`, 14, 30);
+    doc.text(`Total Clients: ${dedupedData.length}`, 14, 30);
 
     const headers = ['Line No.', 'Client Name'];
     if (showSourceColumn) headers.push('Source');
     if (showActiveColumn) headers.push('Status');
     headers.push('PVD SALT', 'INDUSTRIAL SALT', 'RICE', 'CONDENSE');
 
-    const tableData = data.map((row, idx) => {
-      const lineNum = currentPage * pageSize + idx + 1;
+    const tableData = dedupedData.map((row, idx) => {
+      const lineNum = idx + 1;
       const rowData = [lineNum, row.CLIENT_NAME];
       if (showSourceColumn) rowData.push(row.SOURCE);
       if (showActiveColumn) rowData.push(row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1 ? 'Active' : 'Inactive');

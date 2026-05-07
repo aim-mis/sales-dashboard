@@ -202,10 +202,19 @@ function App() {
         }
       });
 
+      console.log('AFTER PRODUCTLINE FILTER:', {
+        productLineFilter,
+        clientProductsMapSize: clientProducts.size,
+        validClientsCount: validClients.size,
+        rowsBeforeFilter: result.length,
+      });
+
       result = result.filter(row => {
         const key = `${row.CLIENT_NAME}|${row.SOURCE}`;
         return validClients.has(key);
       });
+
+      console.log('ROWS AFTER PRODUCTLINE FILTER:', result.length);
     }
 
     if (filtersToApply.clientName) {
@@ -337,8 +346,63 @@ function App() {
     return clientMap;
   };
 
+  const getProductLineCounts = (dataToProcess, filtersToApply) => {
+    let result = dataToProcess;
+
+    if (filtersToApply.clientName) {
+      result = result.filter(row =>
+        row.CLIENT_NAME?.toLowerCase().includes(filtersToApply.clientName.toLowerCase())
+      );
+    }
+
+    if (filtersToApply.source) {
+      result = result.filter(row => row.SOURCE === filtersToApply.source);
+    }
+
+    if (filtersToApply.active !== '') {
+      const isActive = filtersToApply.active === '1';
+      result = result.filter(row => {
+        const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
+        return isActive ? rowIsActive : !rowIsActive;
+      });
+    }
+
+    if (filtersToApply.bdo) {
+      result = result.filter(row => row.BDO === filtersToApply.bdo);
+    }
+
+    if (filtersToApply.bdoTeam) {
+      result = result.filter(row => row['BDO TEAM'] === filtersToApply.bdoTeam);
+    }
+
+    const clientProfiles = getClientProfiles(result);
+    const counts = {
+      'PVD SALT': new Set(),
+      'INDUSTRIAL SALT': new Set(),
+      'RICE': new Set(),
+      'CONDENSE': new Set(),
+    };
+
+    clientProfiles.forEach((profile, clientKey) => {
+      profile.products.forEach(product => {
+        if (counts[product]) {
+          counts[product].add(clientKey);
+        }
+      });
+    });
+
+    return counts;
+  };
+
   const applySorting = (dataToSort) => {
     let deduped = deduplicateClients(dataToSort);
+
+    console.log('APPLYSORT DEBUG:', {
+      inputRowCount: dataToSort.length,
+      dedupedClientCount: deduped.length,
+      selectedProductLineFilter,
+      filters,
+    });
 
     let sorted = deduped;
     if (sortConfig.key) {
@@ -413,34 +477,13 @@ function App() {
       <div className="container">
         <div className="product-line-overview">
           {(() => {
-            const baseFilteredData = data.filter(row => {
-              let include = true;
-              if (filters.clientName) include = include && row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase());
-              if (filters.source) include = include && row.SOURCE === filters.source;
-              if (filters.active !== '') {
-                const isActive = filters.active === '1';
-                const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
-                include = include && (isActive ? rowIsActive : !rowIsActive);
-              }
-              return include;
-            });
+            const productLineCounts = getProductLineCounts(data, filters);
 
-            const clientProfiles = getClientProfiles(baseFilteredData);
-
-            // Count clients for each product line (not exclusive)
-            const productLineCounts = {
-              'PVD SALT': new Set(),
-              'INDUSTRIAL SALT': new Set(),
-              'RICE': new Set(),
-              'CONDENSE': new Set(),
-            };
-
-            clientProfiles.forEach((profile, clientKey) => {
-              profile.products.forEach(product => {
-                if (productLineCounts[product]) {
-                  productLineCounts[product].add(clientKey);
-                }
-              });
+            console.log('MOTHER BOX DEBUG:', {
+              pvdSaltCount: productLineCounts['PVD SALT'].size,
+              industrialSaltCount: productLineCounts['INDUSTRIAL SALT'].size,
+              riceCount: productLineCounts['RICE'].size,
+              condenseCount: productLineCounts['CONDENSE'].size,
             });
 
             return (
@@ -520,19 +563,35 @@ function App() {
 
         <div className="only-summary-section">
           {(() => {
-            const baseFilteredData = data.filter(row => {
-              let include = true;
-              if (filters.clientName) include = include && row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase());
-              if (filters.source) include = include && row.SOURCE === filters.source;
-              if (filters.active !== '') {
-                const isActive = filters.active === '1';
-                const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
-                include = include && (isActive ? rowIsActive : !rowIsActive);
-              }
-              return include;
-            });
+            let result = data;
 
-            const clientProfiles = getClientProfiles(baseFilteredData);
+            if (filters.clientName) {
+              result = result.filter(row =>
+                row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase())
+              );
+            }
+
+            if (filters.source) {
+              result = result.filter(row => row.SOURCE === filters.source);
+            }
+
+            if (filters.active !== '') {
+              const isActive = filters.active === '1';
+              result = result.filter(row => {
+                const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
+                return isActive ? rowIsActive : !rowIsActive;
+              });
+            }
+
+            if (filters.bdo) {
+              result = result.filter(row => row.BDO === filters.bdo);
+            }
+
+            if (filters.bdoTeam) {
+              result = result.filter(row => row['BDO TEAM'] === filters.bdoTeam);
+            }
+
+            const clientProfiles = getClientProfiles(result);
             const onlyCounts = {
               'PVD SALT': 0,
               'INDUSTRIAL SALT': 0,
@@ -575,19 +634,35 @@ function App() {
             {selectedProductLineFilter ? `${selectedProductLineFilter} — Cumulative Combinations` : 'Cumulative Combinations (Select a mother card above)'}
           </h2>
           {selectedProductLineFilter && (() => {
-              const baseFilteredData = data.filter(row => {
-                let include = true;
-                if (filters.clientName) include = include && row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase());
-                if (filters.source) include = include && row.SOURCE === filters.source;
-                if (filters.active !== '') {
-                  const isActive = filters.active === '1';
-                  const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
-                  include = include && (isActive ? rowIsActive : !rowIsActive);
-                }
-                return include;
-              });
+              let result = data;
 
-              const clientProfiles = getClientProfiles(baseFilteredData);
+              if (filters.clientName) {
+                result = result.filter(row =>
+                  row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase())
+                );
+              }
+
+              if (filters.source) {
+                result = result.filter(row => row.SOURCE === filters.source);
+              }
+
+              if (filters.active !== '') {
+                const isActive = filters.active === '1';
+                result = result.filter(row => {
+                  const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
+                  return isActive ? rowIsActive : !rowIsActive;
+                });
+              }
+
+              if (filters.bdo) {
+                result = result.filter(row => row.BDO === filters.bdo);
+              }
+
+              if (filters.bdoTeam) {
+                result = result.filter(row => row['BDO TEAM'] === filters.bdoTeam);
+              }
+
+              const clientProfiles = getClientProfiles(result);
               const categories = {
                 'PVD SALT': 0,
                 'INDUSTRIAL SALT': 0,
@@ -646,19 +721,35 @@ function App() {
         <div className="third-box-section">
           <h2 className="third-box-title">All Exact Combinations</h2>
           {(() => {
-            const baseFilteredData = data.filter(row => {
-              let include = true;
-              if (filters.clientName) include = include && row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase());
-              if (filters.source) include = include && row.SOURCE === filters.source;
-              if (filters.active !== '') {
-                const isActive = filters.active === '1';
-                const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
-                include = include && (isActive ? rowIsActive : !rowIsActive);
-              }
-              return include;
-            });
+            let result = data;
 
-            const clientProfiles = getClientProfiles(baseFilteredData);
+            if (filters.clientName) {
+              result = result.filter(row =>
+                row.CLIENT_NAME?.toLowerCase().includes(filters.clientName.toLowerCase())
+              );
+            }
+
+            if (filters.source) {
+              result = result.filter(row => row.SOURCE === filters.source);
+            }
+
+            if (filters.active !== '') {
+              const isActive = filters.active === '1';
+              result = result.filter(row => {
+                const rowIsActive = row.ACTIVE === 'Y' || row.ACTIVE === true || row.ACTIVE === 1;
+                return isActive ? rowIsActive : !rowIsActive;
+              });
+            }
+
+            if (filters.bdo) {
+              result = result.filter(row => row.BDO === filters.bdo);
+            }
+
+            if (filters.bdoTeam) {
+              result = result.filter(row => row['BDO TEAM'] === filters.bdoTeam);
+            }
+
+            const clientProfiles = getClientProfiles(result);
             const categories = {
               'PVD SALT': 0,
               'INDUSTRIAL SALT': 0,

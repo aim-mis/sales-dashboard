@@ -36,6 +36,7 @@ with tblManila as
 	inner join ARVINAIM.dbo.OITM i on i.itemcode = b.ItemCode
 	left join ARVINAIM.dbo.OSLP o on c.SlpCode = o.SlpCode
 	where i.U_GroupCategory in ('PVD SALT', 'INDUSTRIAL SALT', 'RICE', 'CONDENSE' )
+	and c.validFor = 'Y'
 	GROUP BY c.validFor, c.CardName, i.U_GroupCategory, c.U_BDO, o.SlpName
 ),
 
@@ -50,6 +51,7 @@ tblProvince as
 	left join PROVINCE.dbo.OSLP o on c.SlpCode = o.SlpCode
 	left join province.dbo.[@BDO] bdo on c.u_bdo COLLATE SQL_Latin1_General_CP1_CI_AS = bdo.code COLLATE SQL_Latin1_General_CP1_CI_AS
 	where i.U_GroupCategory in ('PVD SALT', 'INDUSTRIAL SALT', 'RICE', 'CONDENSADA' )
+	and c.validFor = 'Y'
 	GROUP BY c.validFor, c.CardName, i.U_GroupCategory, c.U_BDO, o.SlpName, bdo.name
 )
 SELECT 'MANILA' [SOURCE], validFor [ACTIVE], CardName [CLIENT_NAME], U_GroupCategory [PRODUCT_LINE], U_BDO [BDO], SlpName [BDO TEAM] FROM tblManila
@@ -94,6 +96,7 @@ app.get('/api/product-counts', async (req, res) => {
         inner join ARVINAIM.dbo.OCRD c on a.cardcode = c.CardCode
         inner join ARVINAIM.dbo.OITM i on i.itemcode = b.ItemCode
         where i.U_GroupCategory in ('PVD SALT', 'INDUSTRIAL SALT', 'RICE', 'CONDENSE' )
+        and c.validFor = 'Y'
         GROUP BY c.validFor, c.CardName, i.U_GroupCategory
       ),
       tblProvince as
@@ -104,6 +107,7 @@ app.get('/api/product-counts', async (req, res) => {
         inner join PROVINCE.dbo.OCRD c on a.cardcode = c.CardCode
         inner join PROVINCE.dbo.OITM i on i.itemcode = b.ItemCode
         where i.U_GroupCategory in ('PVD SALT', 'INDUSTRIAL SALT', 'RICE', 'CONDENSADA' )
+        and c.validFor = 'Y'
         GROUP BY c.validFor, c.CardName, i.U_GroupCategory
       ),
       allData as (
