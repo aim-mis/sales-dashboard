@@ -49,11 +49,16 @@ npm install
 ```
 
 #### Build for production
+The frontend automatically uses `.env.production` during build, which sets:
+- `REACT_APP_API_URL=http://192.168.1.124:5070`
+
 ```powershell
 npm run build
 ```
 
-This creates a `build/` folder with static files ready for production.
+This creates a `build/` folder with static files configured to point to your production server (192.168.1.124:5070).
+
+**Note**: The `.env.development` file is used during local development with `npm start`.
 
 #### Serve frontend (Option 1 - Using Node.js)
 Install global HTTP server:

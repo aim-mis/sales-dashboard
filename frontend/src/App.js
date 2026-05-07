@@ -115,7 +115,8 @@ function App() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/data');
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5070';
+      const response = await fetch(`${apiUrl}/api/data`);
       if (!response.ok) throw new Error('Failed to fetch data');
       const jsonData = await response.json();
       setData(jsonData);
@@ -137,7 +138,8 @@ function App() {
 
   const fetchProductCounts = async () => {
     try {
-      const response = await fetch('/api/product-counts');
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5070';
+      const response = await fetch(`${apiUrl}/api/product-counts`);
       if (!response.ok) throw new Error('Failed to fetch product counts');
       const jsonData = await response.json();
       const counts = {};
