@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import './SkeletonLoader.css';
 import Filters from './components/Filters';
 import DataTable from './components/DataTable';
 import ExportButtons from './components/ExportButtons';
+import SkeletonLoader from './components/SkeletonLoader';
 
 function App() {
   const [data, setData] = useState([]);
@@ -466,7 +468,7 @@ function App() {
     }
   };
 
-  if (loading) return <div className="app"><p className="loading">Loading data...</p></div>;
+  if (loading) return <div className="app"><SkeletonLoader /></div>;
   if (error) return <div className="app"><p className="error">Error: {error}</p></div>;
 
   return (
